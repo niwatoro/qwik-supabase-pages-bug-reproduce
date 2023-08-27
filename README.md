@@ -1,113 +1,62 @@
-# Qwik City App ⚡️
+# Bug Reproduction Repository
 
-- [Qwik Docs](https://qwik.builder.io/)
-- [Discord](https://qwik.builder.io/chat)
-- [Qwik GitHub](https://github.com/BuilderIO/qwik)
-- [@QwikDev](https://twitter.com/QwikDev)
-- [Vite](https://vitejs.dev/)
+This repository is created to reproduce and document a specific bug or issue in QwikCity.
 
----
+## Bug Description
 
-## Project Structure
+Cloudflare Pages integration is incompatitble with Supabase. It will give the following error when trying to build:
 
-This project is using Qwik with [QwikCity](https://qwik.builder.io/qwikcity/overview/). QwikCity is just an extra set of tools on top of Qwik to make it easier to build a full site, including directory-based routing, layouts, and more.
-
-Inside your project, you'll see the following directory structure:
-
-```
-├── public/
-│   └── ...
-└── src/
-    ├── components/
-    │   └── ...
-    └── routes/
-        └── ...
+```plaintext
+[commonjs--resolver] Cannot bundle Node.js built-in "stream" imported from "node_modules/@supabase/node-fetch/lib/index.mjs". Consider disabling ssr.noExternal or remove the built-in dependency.
+error during build:
+RollupError: Cannot bundle Node.js built-in "stream" imported from "node_modules/@supabase/node-fetch/lib/index.mjs". Consider disabling ssr.noExternal or remove the built-in dependency.
+    at error (qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:2287:30)
+    at Object.error (qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:25268:20)
+    at Object.resolveId (qwik-supabase-bug-reproduce/node_modules/vite/dist/node/chunks/dep-3b8eb186.js:28210:34)
+    at Object.handler (qwik-supabase-bug-reproduce/node_modules/vite/dist/node/chunks/dep-3b8eb186.js:48180:19)
+    at qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:25461:40
+    at async PluginDriver.hookFirstAndGetPlugin (qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:25361:28)
+    at async resolveId (qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:24035:26)
+    at async ModuleLoader.resolveId (qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:24449:15)
+    at async Object.resolveId (qwik-supabase-bug-reproduce/node_modules/vite/dist/node/chunks/dep-3b8eb186.js:7984:10)
+    at async PluginDriver.hookFirstAndGetPlugin (qwik-supabase-bug-reproduce/node_modules/rollup/dist/es/shared/node-entry.js:25361:28)
 ```
 
-- `src/routes`: Provides the directory-based routing, which can include a hierarchy of `layout.tsx` layout files, and an `index.tsx` file as the page. Additionally, `index.ts` files are endpoints. Please see the [routing docs](https://qwik.builder.io/qwikcity/routing/overview/) for more info.
+## Steps to Reproduce
 
-- `src/components`: Recommended directory for components.
-
-- `public`: Any static assets, like images, can be placed in the public directory. Please see the [Vite public directory](https://vitejs.dev/guide/assets.html#the-public-directory) for more info.
-
-## Add Integrations and deployment
-
-Use the `npm run qwik add` command to add additional integrations. Some examples of integrations includes: Cloudflare, Netlify or Express Server, and the [Static Site Generator (SSG)](https://qwik.builder.io/qwikcity/guides/static-site-generation/).
-
-```shell
-npm run qwik add # or `yarn qwik add`
+```plaintext
+1. Clone this repository.
+2. Run `npm run build`.
 ```
 
-## Development
+## Tentative Fix
 
-Development mode uses [Vite's development server](https://vitejs.dev/). The `dev` command will server-side render (SSR) the output during development.
+1. Install the following browserify packages:
 
-```shell
-npm start # or `yarn start`
+```bash
+npm install assert buffer events stream-http https-browserify punycode stream-browserify url util browserify-zlib
 ```
 
-> Note: during dev mode, Vite may request a significant number of `.js` files. This does not represent a Qwik production build.
+2. Add the following to `vite.config.ts`:
 
-## Preview
-
-The preview command will create a production build of the client modules, a production build of `src/entry.preview.tsx`, and run a local server. The preview server is only for convenience to preview a production build locally and should not be used as a production server.
-
-```shell
-npm run preview # or `yarn preview`
+```typescript
+export default defineConfig(() => {
+  return {
+    resolve: {
+      alias: {
+        assert: "assert",
+        buffer: "buffer",
+        events: "events",
+        http: "stream-http",
+        https: "https-browserify",
+        punycode: "punycode",
+        stream: "stream-browserify",
+        url: "url",
+        util: "util",
+        zlib: "browserify-zlib",
+      },
+    },
+    // ...
+  };
+});
 ```
-
-## Production
-
-The production build will generate client and server modules by running both client and server build commands. The build command will use Typescript to run a type check on the source code.
-
-```shell
-npm run build # or `yarn build`
-```
-
-## Cloudflare Pages
-
-Cloudflare's [wrangler](https://github.com/cloudflare/wrangler) CLI can be used to preview a production build locally. To start a local server, run:
-
-```
-npm run serve
-```
-
-Then visit [http://localhost:8787/](http://localhost:8787/)
-
-### Deployments
-
-[Cloudflare Pages](https://pages.cloudflare.com/) are deployable through their [Git provider integrations](https://developers.cloudflare.com/pages/platform/git-integration/).
-
-If you don't already have an account, then [create a Cloudflare account here](https://dash.cloudflare.com/sign-up/pages). Next go to your dashboard and follow the [Cloudflare Pages deployment guide](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/).
-
-Within the projects "Settings" for "Build and deployments", the "Build command" should be `npm run build`, and the "Build output directory" should be set to `dist`.
-
-### Function Invocation Routes
-
-Cloudflare Page's [function-invocation-routes config](https://developers.cloudflare.com/pages/platform/functions/routing/#functions-invocation-routes) can be used to include, or exclude, certain paths to be used by the worker functions. Having a `_routes.json` file gives developers more granular control over when your Function is invoked.
-This is useful to determine if a page response should be Server-Side Rendered (SSR) or if the response should use a static-site generated (SSG) `index.html` file.
-
-By default, the Cloudflare pages adaptor _does not_ include a `public/_routes.json` config, but rather it is auto-generated from the build by the Cloudflare adaptor. An example of an auto-generate `dist/_routes.json` would be:
-
-```
-{
-  "include": [
-    "/*"
-  ],
-  "exclude": [
-    "/_headers",
-    "/_redirects",
-    "/build/*",
-    "/favicon.ico",
-    "/manifest.json",
-    "/service-worker.js",
-    "/about"
-  ],
-  "version": 1
-}
-```
-
-In the above example, it's saying _all_ pages should be SSR'd. However, the root static files such as `/favicon.ico` and any static assets in `/build/*` should be excluded from the Functions, and instead treated as a static file.
-
-In most cases the generated `dist/_routes.json` file is ideal. However, if you need more granular control over each path, you can instead provide you're own `public/_routes.json` file. When the project provides its own `public/_routes.json` file, then the Cloudflare adaptor will not auto-generate the routes config and instead use the committed one within the `public` directory.
-# qwik-supabase-pages-bug-reproduce
