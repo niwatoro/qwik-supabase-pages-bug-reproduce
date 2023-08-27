@@ -24,10 +24,8 @@ RollupError: Cannot bundle Node.js built-in "stream" imported from "node_modules
 
 ## Steps to Reproduce
 
-```plaintext
 1. Clone this repository.
 2. Run `npm run build`.
-```
 
 ## Tentative Fix
 
